@@ -3,6 +3,16 @@ import { supabase } from './supabase'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
+// Log da URL da API para debug (apenas em desenvolvimento)
+if (import.meta.env.DEV) {
+  console.log('🔧 API Base URL:', API_BASE_URL)
+  if (!import.meta.env.VITE_API_URL) {
+    console.warn('⚠️ VITE_API_URL não está definido. Usando padrão:', API_BASE_URL)
+    console.warn('💡 Para configurar, crie um arquivo .env na pasta frontend com:')
+    console.warn('   VITE_API_URL=http://localhost:8000')
+  }
+}
+
 // Cria instância do axios
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -21,6 +31,9 @@ api.interceptors.request.use(
       }
       if (session?.access_token) {
         config.headers.Authorization = `Bearer ${session.access_token}`
+      } else {
+        // Avisa se não há sessão (mas não bloqueia a requisição, pode ser endpoint público)
+        console.warn('⚠️ Nenhuma sessão ativa. A requisição pode falhar se o endpoint requer autenticação.')
       }
     } catch (err) {
       console.error('Erro no interceptor de requisição:', err)
@@ -34,14 +47,69 @@ api.interceptors.request.use(
 
 // Interceptor para tratar erros de resposta
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // Se for erro 401 (não autorizado), tenta fazer logout
-    if (error.response?.status === 401) {
-      console.error('Erro de autenticação (401):', error)
-      // Opcional: redirecionar para login
-      // supabase.auth.signOut()
+  (response) => {
+    // Verifica se a resposta é HTML (erro comum quando backend não está rodando)
+    const contentType = response.headers['content-type'] || ''
+    const responseData = response.data
+    
+    if (contentType.includes('text/html') || 
+        (typeof responseData === 'string' && responseData.trim().startsWith('<!doctype html>'))) {
+      const errorMsg = `⚠️ Backend retornou HTML em vez de JSON.\n\n` +
+        `Isso geralmente significa que:\n` +
+        `1. O backend não está rodando\n` +
+        `2. A URL da API está incorreta (atual: ${API_BASE_URL})\n` +
+        `3. O backend está redirecionando para a página inicial\n\n` +
+        `Verifique se o backend está rodando e se VITE_API_URL está configurado corretamente.`
+      console.error(errorMsg)
+      return Promise.reject(new Error('Backend não está respondendo corretamente. Verifique se o servidor está rodando.'))
     }
+    return response
+  },
+  (error) => {
+    const status = error.response?.status
+    const method = error.config?.method?.toUpperCase()
+    const url = error.config?.url
+    
+    // Se for erro 401 (não autorizado)
+    if (status === 401) {
+      console.error('Erro de autenticação (401):', error)
+      console.error('💡 Verifique se você está logado e se o token de autenticação é válido')
+    }
+    
+    // Se for erro 405 (Method Not Allowed)
+    if (status === 405) {
+      const errorMsg = `⚠️ Método HTTP não permitido (405)\n\n` +
+        `Tentativa: ${method} ${url}\n` +
+        `Base URL: ${API_BASE_URL}\n\n` +
+        `Possíveis causas:\n` +
+        `1. O endpoint não suporta o método ${method}\n` +
+        `2. Problema de configuração no servidor/reverse proxy\n` +
+        `3. CORS preflight (OPTIONS) pode estar falhando\n\n` +
+        `Verifique a configuração do servidor e se o endpoint está correto.`
+      console.error(errorMsg)
+      return Promise.reject(new Error(`Método ${method} não permitido no endpoint ${url}. Verifique a configuração do servidor.`))
+    }
+    
+    // Se for erro de rede (backend não está rodando)
+    if (error.code === 'ECONNREFUSED' || error.message?.includes('Network Error')) {
+      const errorMsg = `⚠️ Não foi possível conectar ao backend em ${API_BASE_URL}\n\n` +
+        `Verifique se:\n` +
+        `1. O backend está rodando (uvicorn app.main:app --reload --port 8000)\n` +
+        `2. VITE_API_URL está configurado corretamente no arquivo .env\n` +
+        `3. Não há firewall bloqueando a conexão`
+      console.error(errorMsg)
+    }
+    
+    // Verifica se a resposta de erro é HTML
+    if (error.response?.data && typeof error.response.data === 'string' && error.response.data.includes('<!doctype html>')) {
+      const errorMsg = `⚠️ Backend retornou HTML em vez de JSON.\n\n` +
+        `URL tentada: ${url || 'N/A'}\n` +
+        `Base URL: ${API_BASE_URL}\n\n` +
+        `Verifique se o backend está rodando e se VITE_API_URL está configurado corretamente.`
+      console.error(errorMsg)
+      return Promise.reject(new Error('Backend não está respondendo corretamente. Verifique se o servidor está rodando.'))
+    }
+    
     return Promise.reject(error)
   }
 )
@@ -116,14 +184,24 @@ export const bucketApi = {
 
   // Listar buckets do usuário
   list: async (): Promise<Bucket[]> => {
-    const response = await api.get('/api/buckets')
-    // Garante que sempre retorna um array
-    if (Array.isArray(response.data)) {
-      return response.data
+    try {
+      const response = await api.get('/api/buckets')
+      // Garante que sempre retorna um array
+      if (Array.isArray(response.data)) {
+        return response.data
+      }
+      // Se não for array, verifica se é HTML (backend não está rodando)
+      if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
+        console.error('⚠️ Backend retornou HTML. Verifique se o servidor está rodando em', API_BASE_URL)
+        throw new Error('Backend não está respondendo corretamente. Verifique se o servidor está rodando.')
+      }
+      // Se não for array, retorna array vazio
+      console.error('API retornou dados não-array:', response.data)
+      return []
+    } catch (error: any) {
+      // Re-throw para que o componente possa tratar
+      throw error
     }
-    // Se não for array, retorna array vazio
-    console.error('API retornou dados não-array:', response.data)
-    return []
   },
 
   // Buscar bucket por ID

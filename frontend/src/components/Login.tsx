@@ -19,21 +19,47 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
-        if (error) throw error
+        if (error) {
+          console.error('Erro no login:', error)
+          // Mensagens mais específicas para diferentes erros
+          if (error.message.includes('Invalid login credentials')) {
+            throw new Error('Email ou senha incorretos')
+          } else if (error.message.includes('Email not confirmed')) {
+            throw new Error('Email não confirmado. Verifique sua caixa de entrada.')
+          } else if (error.status === 400) {
+            throw new Error('Dados inválidos. Verifique o email e senha.')
+          }
+          throw error
+        }
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
         })
-        if (error) throw error
+        if (error) {
+          console.error('Erro no registro:', error)
+          if (error.message.includes('already registered')) {
+            throw new Error('Este email já está cadastrado. Faça login.')
+          } else if (error.status === 422) {
+            throw new Error('Dados inválidos. Verifique o email e senha (mínimo 6 caracteres).')
+          }
+          throw error
+        }
+        // Se o registro foi bem-sucedido mas requer confirmação
+        if (data.user && !data.session) {
+          setError('Registro realizado! Verifique seu email para confirmar a conta.')
+          return
+        }
       }
       onLoginSuccess()
     } catch (err: any) {
-      setError(err.message || 'Erro ao autenticar')
+      const errorMessage = err.message || err.error_description || 'Erro ao autenticar'
+      setError(errorMessage)
+      console.error('Erro completo:', err)
     } finally {
       setLoading(false)
     }

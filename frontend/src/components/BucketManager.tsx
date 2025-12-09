@@ -49,7 +49,16 @@ export default function BucketManager({
     } catch (err: any) {
       console.error('Erro ao carregar buckets:', err)
       setBuckets([])
-      setError(err.response?.data?.detail || err.message || 'Erro ao carregar buckets')
+      const errorMessage = err.message || err.response?.data?.detail || 'Erro ao carregar buckets'
+      
+      // Mensagem mais amigável para erros de conexão
+      if (errorMessage.includes('Backend não está respondendo') || 
+          errorMessage.includes('Network Error') ||
+          errorMessage.includes('ECONNREFUSED')) {
+        setError('⚠️ Não foi possível conectar ao backend. Verifique se o servidor está rodando.')
+      } else {
+        setError(errorMessage)
+      }
     } finally {
       setLoading(false)
     }
@@ -87,7 +96,22 @@ export default function BucketManager({
       })
       await loadBuckets()
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Erro ao salvar bucket')
+      console.error('Erro ao salvar bucket:', err)
+      const status = err.response?.status
+      let errorMessage = err.response?.data?.detail || err.message || 'Erro ao salvar bucket'
+      
+      // Mensagens mais específicas para diferentes erros
+      if (status === 401) {
+        errorMessage = 'Erro de autenticação. Por favor, faça login novamente.'
+      } else if (status === 405) {
+        errorMessage = 'Método HTTP não permitido. Verifique a configuração do servidor.'
+      } else if (status === 400) {
+        errorMessage = err.response?.data?.detail || 'Dados inválidos. Verifique os campos preenchidos.'
+      } else if (status === 403) {
+        errorMessage = 'Acesso negado. Verifique suas permissões.'
+      }
+      
+      setError(errorMessage)
     } finally {
       setSubmitting(false)
     }

@@ -49,9 +49,15 @@ function App() {
         console.error('Dados retornados não são um array:', data)
         setBuckets([])
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao carregar buckets:', err)
       setBuckets([])
+      // Log mais detalhado para ajudar no debug
+      if (err.message?.includes('Backend não está respondendo')) {
+        console.error('💡 Dica: Certifique-se de que o backend está rodando:')
+        console.error('   cd backend')
+        console.error('   uvicorn app.main:app --reload --port 8000')
+      }
     }
   }
 

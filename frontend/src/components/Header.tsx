@@ -73,6 +73,7 @@ export default function Header({
     } catch (err: any) {
       console.error('Erro ao carregar buckets:', err)
       setBuckets([])
+      // Não mostra erro no Header para não poluir a UI, apenas no console
     }
   }
 
