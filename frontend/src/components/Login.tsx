@@ -19,7 +19,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
     try {
       if (isLogin) {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
@@ -50,7 +50,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           throw error
         }
         // Se o registro foi bem-sucedido mas requer confirmação
-        if (data.user && !data.session) {
+        if (data && data.user && !data.session) {
           setError('Registro realizado! Verifique seu email para confirmar a conta.')
           return
         }
