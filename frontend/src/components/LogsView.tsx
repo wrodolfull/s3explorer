@@ -26,9 +26,18 @@ export default function LogsView({ buckets, onBackToFiles }: LogsViewProps) {
         selectedActionType || undefined,
         100
       )
-      setLogs(data.logs)
+      // Garante que data.logs é um array antes de usar
+      if (data && Array.isArray(data.logs)) {
+        setLogs(data.logs)
+      } else {
+        console.error('Dados retornados não têm estrutura esperada:', data)
+        setLogs([])
+        setError('Erro: resposta da API inválida')
+      }
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Erro ao carregar logs')
+      console.error('Erro ao carregar logs:', err)
+      setLogs([])
+      setError(err.response?.data?.detail || err.message || 'Erro ao carregar logs')
     } finally {
       setLoading(false)
     }

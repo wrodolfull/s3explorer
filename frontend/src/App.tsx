@@ -42,9 +42,16 @@ function App() {
   const loadBuckets = async () => {
     try {
       const data = await bucketApi.list()
-      setBuckets(data)
+      // Garante que data é um array antes de usar
+      if (Array.isArray(data)) {
+        setBuckets(data)
+      } else {
+        console.error('Dados retornados não são um array:', data)
+        setBuckets([])
+      }
     } catch (err) {
       console.error('Erro ao carregar buckets:', err)
+      setBuckets([])
     }
   }
 
@@ -67,7 +74,12 @@ function App() {
   }
 
   if (!user) {
-    return <Login onLoginSuccess={() => setUser(user)} />
+    return <Login onLoginSuccess={() => {
+      // Recarrega a sessão após login bem-sucedido
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setUser(session?.user ?? null)
+      })
+    }} />
   }
 
   return (

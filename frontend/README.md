@@ -38,3 +38,4 @@ Os arquivos serão gerados na pasta `dist/`
 - `VITE_API_URL`: URL da API backend (padrão: http://localhost:8000)
 
 
+

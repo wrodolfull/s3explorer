@@ -60,12 +60,19 @@ export default function Header({
   const loadBuckets = async () => {
     try {
       const data = await bucketApi.list()
-      setBuckets(data)
-      if (data.length > 0 && !selectedBucket) {
-        onBucketSelect(data.find((b) => b.active) || data[0])
+      // Garante que data é um array antes de usar
+      if (Array.isArray(data)) {
+        setBuckets(data)
+        if (data.length > 0 && !selectedBucket) {
+          onBucketSelect(data.find((b) => b.active) || data[0])
+        }
+      } else {
+        console.error('Dados retornados não são um array:', data)
+        setBuckets([])
       }
     } catch (err: any) {
       console.error('Erro ao carregar buckets:', err)
+      setBuckets([])
     }
   }
 

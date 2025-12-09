@@ -33,13 +33,23 @@ export default function BucketManager({
   const loadBuckets = async () => {
     try {
       setLoading(true)
+      setError(null)
       const data = await bucketApi.list()
-      setBuckets(data)
-      if (data.length > 0 && !selectedBucket) {
-        onBucketSelect(data[0])
+      // Garante que data é um array antes de usar
+      if (Array.isArray(data)) {
+        setBuckets(data)
+        if (data.length > 0 && !selectedBucket) {
+          onBucketSelect(data[0])
+        }
+      } else {
+        console.error('Dados retornados não são um array:', data)
+        setBuckets([])
+        setError('Erro: resposta da API inválida')
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Erro ao carregar buckets')
+      console.error('Erro ao carregar buckets:', err)
+      setBuckets([])
+      setError(err.response?.data?.detail || err.message || 'Erro ao carregar buckets')
     } finally {
       setLoading(false)
     }

@@ -118,9 +118,18 @@ export default function FileList({ bucket }: FileListProps) {
         dateTo: dateToParam || undefined,
         fileExtension: fileExtensionParam || undefined,
       })
-      setFiles(data.files)
-      setHasMore(data.has_more)
-      setNextToken(data.next_token)
+      // Garante que data.files é um array antes de usar
+      if (data && Array.isArray(data.files)) {
+        setFiles(data.files)
+        setHasMore(data.has_more || false)
+        setNextToken(data.next_token)
+      } else {
+        console.error('Dados retornados não têm estrutura esperada:', data)
+        setFiles([])
+        setHasMore(false)
+        setNextToken(undefined)
+        setError('Erro: resposta da API inválida')
+      }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Erro ao carregar arquivos')
     } finally {

@@ -14,13 +14,34 @@ const api = axios.create({
 // Interceptor para adicionar token de autenticação
 api.interceptors.request.use(
   async (config) => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session?.access_token) {
-      config.headers.Authorization = `Bearer ${session.access_token}`
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession()
+      if (error) {
+        console.error('Erro ao obter sessão:', error)
+      }
+      if (session?.access_token) {
+        config.headers.Authorization = `Bearer ${session.access_token}`
+      }
+    } catch (err) {
+      console.error('Erro no interceptor de requisição:', err)
     }
     return config
   },
   (error) => {
+    return Promise.reject(error)
+  }
+)
+
+// Interceptor para tratar erros de resposta
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Se for erro 401 (não autorizado), tenta fazer logout
+    if (error.response?.status === 401) {
+      console.error('Erro de autenticação (401):', error)
+      // Opcional: redirecionar para login
+      // supabase.auth.signOut()
+    }
     return Promise.reject(error)
   }
 )
@@ -96,7 +117,13 @@ export const bucketApi = {
   // Listar buckets do usuário
   list: async (): Promise<Bucket[]> => {
     const response = await api.get('/api/buckets')
-    return response.data
+    // Garante que sempre retorna um array
+    if (Array.isArray(response.data)) {
+      return response.data
+    }
+    // Se não for array, retorna array vazio
+    console.error('API retornou dados não-array:', response.data)
+    return []
   },
 
   // Buscar bucket por ID
@@ -149,7 +176,21 @@ export const fileApi = {
     if (options?.dateTo) params.date_to = options.dateTo
     if (options?.fileExtension) params.file_extension = options.fileExtension
     const response = await api.get(`/api/buckets/${bucketId}/files`, { params })
-    return response.data
+    // Garante que a resposta tem a estrutura esperada
+    if (response.data && Array.isArray(response.data.files)) {
+      return response.data
+    }
+    // Se não tiver a estrutura esperada, retorna estrutura padrão
+    console.error('API retornou dados com estrutura inválida:', response.data)
+    return {
+      bucket_id: bucketId,
+      bucket_name: '',
+      files: [],
+      total: 0,
+      page: options?.page || 1,
+      page_size: options?.pageSize || 50,
+      has_more: false,
+    }
   },
 
   // Download múltiplo
@@ -272,7 +313,13 @@ export const logApi = {
     if (actionType) params.action_type = actionType
     if (limit) params.limit = limit
     const response = await api.get('/api/logs', { params })
-    return response.data
+    // Garante que a resposta tem a estrutura esperada
+    if (response.data && Array.isArray(response.data.logs)) {
+      return response.data
+    }
+    // Se não tiver a estrutura esperada, retorna estrutura padrão
+    console.error('API retornou dados com estrutura inválida:', response.data)
+    return { logs: [], total: 0 }
   },
 }
 
