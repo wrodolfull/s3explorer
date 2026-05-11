@@ -14,6 +14,7 @@ export default function FileList({ bucket }: FileListProps) {
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
   const [nextToken, setNextToken] = useState<string | undefined>(undefined)
+  const [pageTokens, setPageTokens] = useState<Record<number, string | undefined>>({ 1: undefined })
   const [searchText, setSearchText] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -34,6 +35,7 @@ export default function FileList({ bucket }: FileListProps) {
     if (bucket) {
       setPage(1)
       setNextToken(undefined)
+      setPageTokens({ 1: undefined })
       setSelectedFiles(new Set())
       setAppliedSearchText('')
       setAppliedDateFrom('')
@@ -56,6 +58,7 @@ export default function FileList({ bucket }: FileListProps) {
       if (searchText !== appliedSearchText) {
         setPage(1)
         setNextToken(undefined)
+        setPageTokens({ 1: undefined })
         setSelectedFiles(new Set())
         setAppliedSearchText(searchText)
         loadFiles(1, undefined, searchText, dateFrom, dateTo)
@@ -73,6 +76,7 @@ export default function FileList({ bucket }: FileListProps) {
     if (dateFrom !== appliedDateFrom || dateTo !== appliedDateTo) {
       setPage(1)
       setNextToken(undefined)
+      setPageTokens({ 1: undefined })
       setSelectedFiles(new Set())
       setAppliedDateFrom(dateFrom)
       setAppliedDateTo(dateTo)
@@ -120,6 +124,10 @@ export default function FileList({ bucket }: FileListProps) {
         setFiles(data.files)
         setHasMore(data.has_more || false)
         setNextToken(data.next_token)
+        setPageTokens((prev) => ({
+          ...prev,
+          [pageNum + 1]: data.next_token,
+        }))
       } else {
         console.error('Dados retornados não têm estrutura esperada:', data)
         setFiles([])
@@ -137,6 +145,7 @@ export default function FileList({ bucket }: FileListProps) {
   const handleApplyFilters = () => {
     setPage(1)
     setNextToken(undefined)
+    setPageTokens({ 1: undefined })
     setSelectedFiles(new Set())
     setAppliedSearchText(searchText)
     setAppliedDateFrom(dateFrom)
@@ -153,14 +162,16 @@ export default function FileList({ bucket }: FileListProps) {
     setAppliedDateTo('')
     setPage(1)
     setNextToken(undefined)
+    setPageTokens({ 1: undefined })
     setSelectedFiles(new Set())
     loadFiles(1)
   }
 
   const handlePageChange = (newPage: number) => {
+    const tokenForPage = pageTokens[newPage]
     setPage(newPage)
     setSelectedFiles(new Set())
-    loadFiles(newPage, nextToken, appliedSearchText, appliedDateFrom, appliedDateTo)
+    loadFiles(newPage, tokenForPage, appliedSearchText, appliedDateFrom, appliedDateTo)
   }
 
   const handleReadTranscription = async (fileKey: string) => {
