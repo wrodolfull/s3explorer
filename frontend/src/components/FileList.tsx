@@ -10,7 +10,6 @@ export default function FileList({ bucket }: FileListProps) {
   const [files, setFiles] = useState<FileInfo[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [deleting, setDeleting] = useState<string | null>(null)
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set())
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
@@ -18,16 +17,16 @@ export default function FileList({ bucket }: FileListProps) {
   const [searchText, setSearchText] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
-  const [fileExtension, setFileExtension] = useState('')
   const [downloading, setDownloading] = useState(false)
   const [readingTranscription, setReadingTranscription] = useState<string | null>(null)
   const [transcriptionContent, setTranscriptionContent] = useState<any>(null)
   const [showTranscriptionModal, setShowTranscriptionModal] = useState(false)
+  const [showAudioModal, setShowAudioModal] = useState(false)
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
   // Estados para filtros aplicados (que realmente fazem a busca)
   const [appliedSearchText, setAppliedSearchText] = useState('')
   const [appliedDateFrom, setAppliedDateFrom] = useState('')
   const [appliedDateTo, setAppliedDateTo] = useState('')
-  const [appliedFileExtension, setAppliedFileExtension] = useState('')
   const pageSize = 50
 
   useEffect(() => {
@@ -38,11 +37,9 @@ export default function FileList({ bucket }: FileListProps) {
       setAppliedSearchText('')
       setAppliedDateFrom('')
       setAppliedDateTo('')
-      setAppliedFileExtension('')
       setSearchText('')
       setDateFrom('')
       setDateTo('')
-      setFileExtension('')
       loadFiles(1)
     } else {
       setFiles([])
@@ -55,19 +52,18 @@ export default function FileList({ bucket }: FileListProps) {
     if (!bucket) return
     
     const timer = setTimeout(() => {
-      if (searchText !== appliedSearchText || fileExtension !== appliedFileExtension) {
+      if (searchText !== appliedSearchText) {
         setPage(1)
         setNextToken(undefined)
         setSelectedFiles(new Set())
         setAppliedSearchText(searchText)
-        setAppliedFileExtension(fileExtension)
-        loadFiles(1, undefined, searchText, dateFrom, dateTo, fileExtension)
+        loadFiles(1, undefined, searchText, dateFrom, dateTo)
       }
     }, 800)
 
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchText, fileExtension])
+  }, [searchText])
 
   // Para datas, aplica imediatamente quando mudar
   useEffect(() => {
@@ -79,7 +75,7 @@ export default function FileList({ bucket }: FileListProps) {
       setSelectedFiles(new Set())
       setAppliedDateFrom(dateFrom)
       setAppliedDateTo(dateTo)
-      loadFiles(1, undefined, searchText, dateFrom, dateTo, fileExtension)
+      loadFiles(1, undefined, searchText, dateFrom, dateTo)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateFrom, dateTo])
@@ -89,12 +85,12 @@ export default function FileList({ bucket }: FileListProps) {
     if (!bucket) return
 
     const interval = setInterval(() => {
-      loadFiles(page, nextToken, appliedSearchText, appliedDateFrom, appliedDateTo, appliedFileExtension)
+      loadFiles(page, nextToken, appliedSearchText, appliedDateFrom, appliedDateTo)
     }, 3600000) // 1 hora = 3600000ms
 
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bucket, page, nextToken, appliedSearchText, appliedDateFrom, appliedDateTo, appliedFileExtension])
+  }, [bucket, page, nextToken, appliedSearchText, appliedDateFrom, appliedDateTo])
 
   const loadFiles = async (
     pageNum: number,
@@ -102,7 +98,6 @@ export default function FileList({ bucket }: FileListProps) {
     search?: string,
     dateFromParam?: string,
     dateToParam?: string,
-    fileExtensionParam?: string
   ) => {
     if (!bucket) return
 
@@ -116,7 +111,6 @@ export default function FileList({ bucket }: FileListProps) {
         search: search || undefined,
         dateFrom: dateFromParam || undefined,
         dateTo: dateToParam || undefined,
-        fileExtension: fileExtensionParam || undefined,
       })
       // Garante que data.files é um array antes de usar
       if (data && Array.isArray(data.files)) {
@@ -144,14 +138,13 @@ export default function FileList({ bucket }: FileListProps) {
     setAppliedSearchText(searchText)
     setAppliedDateFrom(dateFrom)
     setAppliedDateTo(dateTo)
-    setAppliedFileExtension(fileExtension)
-    loadFiles(1, undefined, searchText, dateFrom, dateTo, fileExtension)
+    loadFiles(1, undefined, searchText, dateFrom, dateTo)
   }
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage)
     setSelectedFiles(new Set())
-    loadFiles(newPage, nextToken, appliedSearchText, appliedDateFrom, appliedDateTo, appliedFileExtension)
+    loadFiles(newPage, nextToken, appliedSearchText, appliedDateFrom, appliedDateTo)
   }
 
   const handleReadTranscription = async (fileKey: string) => {
@@ -238,25 +231,6 @@ export default function FileList({ bucket }: FileListProps) {
     }
   }
 
-  const handleDelete = async (fileKey: string) => {
-    if (!bucket) return
-
-    if (!confirm(`Tem certeza que deseja deletar "${fileKey}"?`)) {
-      return
-    }
-
-    try {
-      setDeleting(fileKey)
-      await fileApi.delete(bucket.id, fileKey)
-      await loadFiles(page, nextToken)
-      setSelectedFiles(new Set())
-    } catch (err: any) {
-      alert(err.response?.data?.detail || 'Erro ao deletar arquivo')
-    } finally {
-      setDeleting(null)
-    }
-  }
-
   const handleSelectFile = (fileKey: string) => {
     const newSelected = new Set(selectedFiles)
     if (newSelected.has(fileKey)) {
@@ -295,6 +269,26 @@ export default function FileList({ bucket }: FileListProps) {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${Math.floor(milliseconds / 100).toString().padStart(1, '0')}`
   }
 
+  const groupedFiles = Object.values(
+    files.reduce((acc, file) => {
+      const groupKey = file.call_metadata?.call_uuid || file.key
+      if (!acc[groupKey]) acc[groupKey] = []
+      acc[groupKey].push(file)
+      return acc
+    }, {} as Record<string, FileInfo[]>)
+  )
+
+  const handleListenCall = async (fileKey: string) => {
+    if (!bucket) return
+    try {
+      const { url } = await fileApi.download(bucket.id, fileKey)
+      setAudioUrl(url)
+      setShowAudioModal(true)
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Erro ao carregar áudio')
+    }
+  }
+
   if (!bucket) {
     return (
       <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
@@ -325,7 +319,7 @@ export default function FileList({ bucket }: FileListProps) {
             {downloading ? 'Baixando...' : 'Download Todos'}
           </button>
           <button
-            onClick={() => loadFiles(page, nextToken, appliedSearchText, appliedDateFrom, appliedDateTo, appliedFileExtension)}
+            onClick={() => loadFiles(page, nextToken, appliedSearchText, appliedDateFrom, appliedDateTo)}
             disabled={loading}
             className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
           >
@@ -336,7 +330,7 @@ export default function FileList({ bucket }: FileListProps) {
 
       {/* Filtros */}
       <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Buscar (case sensitive)
@@ -352,23 +346,6 @@ export default function FileList({ bucket }: FileListProps) {
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
               placeholder="Digite e pressione Enter ou clique em Aplicar"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Extensão do Arquivo
-            </label>
-            <input
-              type="text"
-              value={fileExtension}
-              onChange={(e) => setFileExtension(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handleApplyFilters()
-                }
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              placeholder="Ex: .pdf, .jpg, .txt"
             />
           </div>
           <div>
@@ -401,7 +378,7 @@ export default function FileList({ bucket }: FileListProps) {
           >
             Aplicar Filtros
           </button>
-          {(appliedSearchText || appliedDateFrom || appliedDateTo || appliedFileExtension) && (
+          {(appliedSearchText || appliedDateFrom || appliedDateTo) && (
             <>
               <span className="text-sm text-gray-500">|</span>
               <button
@@ -409,12 +386,10 @@ export default function FileList({ bucket }: FileListProps) {
                   setSearchText('')
                   setDateFrom('')
                   setDateTo('')
-                  setFileExtension('')
-                  setAppliedSearchText('')
+                              setAppliedSearchText('')
                   setAppliedDateFrom('')
                   setAppliedDateTo('')
-                  setAppliedFileExtension('')
-                  setPage(1)
+                              setPage(1)
                   setNextToken(undefined)
                   setSelectedFiles(new Set())
                   loadFiles(1)
@@ -467,52 +442,46 @@ export default function FileList({ bucket }: FileListProps) {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
                     Tipo
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-                    Leg
-                  </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Número
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
-                    UUID Chamada
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-                    Tamanho
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
                     Modificado
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
-                    Ações
-                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Ações</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">...</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {files.map((file) => (
+                {groupedFiles.map((group) => {
+                  const audioFile = group.find((f) => f.call_metadata?.file_type === "audio")
+                  const transcriptionFile = group.find((f) => f.call_metadata?.file_type === "transcription")
+                  const baseFile = audioFile || transcriptionFile || group[0]
+                  return (
                   <tr
-                    key={file.key}
+                    key={baseFile.key}
                     className={`hover:bg-gray-50 ${
-                      selectedFiles.has(file.key) ? 'bg-primary-50' : ''
+                      selectedFiles.has(baseFile.key) ? 'bg-primary-50' : ''
                     }`}
                   >
                     <td className="px-4 py-4 whitespace-nowrap">
                       <input
                         type="checkbox"
-                        checked={selectedFiles.has(file.key)}
-                        onChange={() => handleSelectFile(file.key)}
+                        checked={selectedFiles.has(baseFile.key)}
+                        onChange={() => handleSelectFile(baseFile.key)}
                         className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                       />
                     </td>
                     <td className="px-4 py-4">
-                      <div className="text-sm font-medium text-gray-900 break-words" title={file.key}>
-                        {file.key}
+                      <div className="text-sm font-medium text-gray-900 break-words" title={baseFile.key}>
+                        {baseFile.key}
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-500">
-                        {file.call_metadata?.file_type === 'audio' ? (
+                        {baseFile.call_metadata?.file_type === 'audio' ? (
                           <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">Áudio</span>
-                        ) : file.call_metadata?.file_type === 'transcription' ? (
+                        ) : baseFile.call_metadata?.file_type === 'transcription' ? (
                           <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Transcrição</span>
                         ) : (
                           <span className="text-gray-400">-</span>
@@ -521,64 +490,149 @@ export default function FileList({ bucket }: FileListProps) {
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-500">
-                        {file.call_metadata?.leg ? (
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            file.call_metadata.leg === 'A' 
-                              ? 'bg-purple-100 text-purple-700' 
-                              : 'bg-orange-100 text-orange-700'
-                          }`}>
-                            Leg {file.call_metadata.leg}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
+                        {baseFile.call_metadata?.phone_number || '-'}
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">
-                        {file.call_metadata?.phone_number || '-'}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="text-xs text-gray-500 break-all" title={file.call_metadata?.call_uuid || ''}>
-                        {file.call_metadata?.call_uuid || '-'}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{formatFileSize(file.size)}</div>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{formatDate(file.last_modified)}</div>
+                      <div className="text-sm text-gray-500">{formatDate(baseFile.last_modified)}</div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end gap-2">
-                        {file.call_metadata?.file_type === 'transcription' && (
+                        {audioFile && (
                           <button
-                            onClick={() => handleReadTranscription(file.key)}
-                            disabled={readingTranscription === file.key}
-                            className="text-green-600 hover:text-green-900 disabled:opacity-50"
-                            title="Ler transcrição"
+                            onClick={() => handleListenCall(audioFile.key)}
+                            title="Ouvir chamada"
+                            aria-label="Ouvir chamada"
+                            className="text-gray-500 hover:text-gray-700"
                           >
-                            {readingTranscription === file.key ? 'Carregando...' : 'Ler'}
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                              className="w-5 h-5"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm14.28-.53-4.5-3a.75.75 0 00-1.155.624v6a.75.75 0 001.155.624l4.5-3a.75.75 0 000-1.248z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
                           </button>
                         )}
+
+                        {transcriptionFile && (
+                          <button
+                            onClick={() =>
+                              handleReadTranscription(transcriptionFile?.key || baseFile.key)
+                            }
+                            disabled={
+                              readingTranscription ===
+                              (transcriptionFile?.key || baseFile.key)
+                            }
+                            className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                            title="Ler transcrição"
+                            aria-label="Ler transcrição"
+                          >
+                            {readingTranscription ===
+                            (transcriptionFile?.key || baseFile.key) ? (
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                className="w-5 h-5 animate-spin"
+                              >
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                />
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                                />
+                              </svg>
+                            ) : (
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                                className="w-5 h-5"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M5.625 1.5A2.625 2.625 0 003 4.125v15.75A2.625 2.625 0 005.625 22.5h12.75A2.625 2.625 0 0021 19.875V8.56a2.625 2.625 0 00-.769-1.856l-4.935-4.935A2.625 2.625 0 0013.44 1H5.625zm7.5 5.25a.75.75 0 000 1.5h1.5a.75.75 0 000-1.5h-1.5zm-3 4.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-4.5zm0 4.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-4.5z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            )}
+                          </button>
+                        )}
+
                         <button
-                          onClick={() => handleDownload(file.key)}
-                          className="text-primary-600 hover:text-primary-900"
+                          onClick={() => handleDownload(baseFile.key)}
+                          className="text-gray-500 hover:text-gray-700"
+                          title="Download"
+                          aria-label="Download"
                         >
-                          Download
-                        </button>
-                        <button
-                          onClick={() => handleDelete(file.key)}
-                          disabled={deleting === file.key}
-                          className="text-red-600 hover:text-red-900 disabled:opacity-50"
-                        >
-                          {deleting === file.key ? 'Deletando...' : 'Deletar'}
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            className="w-5 h-5"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M12 2.25a.75.75 0 01.75.75v10.19l2.72-2.72a.75.75 0 111.06 1.06l-4 4a.75.75 0 01-1.06 0l-4-4a.75.75 0 111.06-1.06l2.72 2.72V3a.75.75 0 01.75-.75z"
+                              clipRule="evenodd"
+                            />
+                            <path d="M3.75 15a.75.75 0 01.75.75v3a.75.75 0 00.75.75h13.5a.75.75 0 00.75-.75v-3a.75.75 0 011.5 0v3a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18.75v-3a.75.75 0 01.75-.75z" />
+                          </svg>
                         </button>
                       </div>
                     </td>
+
+                    <td className="px-4 py-4">
+                      <details className="text-xs text-gray-600">
+                        <summary
+                          className="cursor-pointer list-none text-gray-500 hover:text-gray-700 [&::-webkit-details-marker]:hidden"
+                          title="Ver detalhes"
+                          aria-label="Ver detalhes"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            className="w-5 h-5"
+                          >
+                            <path d="M12 6.75a1.125 1.125 0 110-2.25 1.125 1.125 0 010 2.25zM12 13.125a1.125 1.125 0 110-2.25 1.125 1.125 0 010 2.25zM12 19.5a1.125 1.125 0 110-2.25 1.125 1.125 0 010 2.25z" />
+                          </svg>
+                        </summary>
+
+                        <div className="mt-2 space-y-1">
+                          <div>
+                            <strong>UUID:</strong> {baseFile.call_metadata?.call_uuid || '-'}
+                          </div>
+
+                          <div>
+                            <strong>Leg:</strong> {baseFile.call_metadata?.leg || '-'}
+                          </div>
+
+                          <div>
+                            <strong>Tamanho:</strong> {formatFileSize(baseFile.size)}
+                          </div>
+
+                          <div>
+                            <strong>Arquivos agrupados:</strong> {group.length}
+                          </div>
+                        </div>
+                      </details>
+                    </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>
@@ -606,6 +660,19 @@ export default function FileList({ bucket }: FileListProps) {
             </div>
           </div>
         </>
+      )}
+
+      {showAudioModal && audioUrl && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl">
+            <h2 className="text-xl font-bold mb-4">Ouvir chamada</h2>
+            <audio src={audioUrl} controls className="w-full" />
+            <div className="mt-3 text-sm text-gray-600">Use os controles do player para adiantar e acelerar o áudio.</div>
+            <div className="mt-4 flex justify-end">
+              <button onClick={() => { setShowAudioModal(false); setAudioUrl(null)}} className="bg-gray-300 px-4 py-2 rounded-lg">Fechar</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal de Transcrição */}
