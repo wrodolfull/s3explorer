@@ -587,16 +587,14 @@ export default function FileList({ bucket }: FileListProps) {
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
                                 viewBox="0 0 24 24"
-                                strokeWidth={1.8}
-                                stroke="currentColor"
+                                fill="currentColor"
                                 className="w-5 h-5"
                               >
                                 <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M2.25 13.5a8.25 8.25 0 0116.5 0v6a2.25 2.25 0 01-2.25 2.25H15a.75.75 0 01-.75-.75v-4.5A.75.75 0 0115 15h2.25V13.5a5.25 5.25 0 10-10.5 0V15H9a.75.75 0 01.75.75v4.5A.75.75 0 019 21H7.5a2.25 2.25 0 01-2.25-2.25v-5.25z"
+                                  fillRule="evenodd"
+                                  d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm14.28-.53-4.5-3a.75.75 0 00-1.155.624v6a.75.75 0 001.155.624l4.5-3a.75.75 0 000-1.248z"
+                                  clipRule="evenodd"
                                 />
                               </svg>
                             </button>
@@ -640,16 +638,14 @@ export default function FileList({ bucket }: FileListProps) {
                               ) : (
                                 <svg
                                   xmlns="http://www.w3.org/2000/svg"
-                                  fill="none"
                                   viewBox="0 0 24 24"
-                                  strokeWidth={1.8}
-                                  stroke="currentColor"
+                                  fill="currentColor"
                                   className="w-5 h-5"
                                 >
                                   <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125V5.25m0 0L11.25 3H6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 006 21h12a2.25 2.25 0 002.25-2.25V9a2.25 2.25 0 00-2.25-2.25h-4.5z"
+                                    fillRule="evenodd"
+                                    d="M5.625 1.5A2.625 2.625 0 003 4.125v15.75A2.625 2.625 0 005.625 22.5h12.75A2.625 2.625 0 0021 19.875V8.56a2.625 2.625 0 00-.769-1.856l-4.935-4.935A2.625 2.625 0 0013.44 1H5.625zm7.5 5.25a.75.75 0 000 1.5h1.5a.75.75 0 000-1.5h-1.5zm-3 4.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-4.5zm0 4.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-4.5z"
+                                    clipRule="evenodd"
                                   />
                                 </svg>
                               )}
@@ -664,17 +660,16 @@ export default function FileList({ bucket }: FileListProps) {
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
                               viewBox="0 0 24 24"
-                              strokeWidth={1.8}
-                              stroke="currentColor"
+                              fill="currentColor"
                               className="w-5 h-5"
                             >
                               <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M12 3v12m0 0l-3.75-3.75M12 15l3.75-3.75M4.5 15.75v2.25A2.25 2.25 0 006.75 20.25h10.5A2.25 2.25 0 0019.5 18v-2.25"
+                                fillRule="evenodd"
+                                d="M12 2.25a.75.75 0 01.75.75v10.19l2.72-2.72a.75.75 0 111.06 1.06l-4 4a.75.75 0 01-1.06 0l-4-4a.75.75 0 111.06-1.06l2.72 2.72V3a.75.75 0 01.75-.75z"
+                                clipRule="evenodd"
                               />
+                              <path d="M3.75 15a.75.75 0 01.75.75v3a.75.75 0 00.75.75h13.5a.75.75 0 00.75-.75v-3a.75.75 0 011.5 0v3a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18.75v-3a.75.75 0 01.75-.75z" />
                             </svg>
                           </button>
                         </div>
@@ -689,17 +684,11 @@ export default function FileList({ bucket }: FileListProps) {
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
                               viewBox="0 0 24 24"
-                              strokeWidth={1.8}
-                              stroke="currentColor"
+                              fill="currentColor"
                               className="w-5 h-5"
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M6.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm6 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm4.5.75a.75.75 0 100-1.5.75.75 0 000 1.5z"
-                              />
+                              <path d="M6.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM12.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM18.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
                             </svg>
                           </summary>
 
