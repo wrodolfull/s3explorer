@@ -386,15 +386,15 @@ async def list_files(
         )
         
         # Lista arquivos com paginação
-        start_after = None
+        continuation_token = None
         if next_token:
-            start_after = next_token
+            continuation_token = next_token
         
         files, next_token_result, has_more = list_bucket_files(
             s3_client,
             bucket_data["bucket_name"],
             prefix,
-            start_after,
+            continuation_token,
             page_size
         )
         
@@ -888,4 +888,3 @@ async def list_logs(
         raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
