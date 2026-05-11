@@ -225,7 +225,7 @@ export default function Header({
                           d="M12 4v16m8-8H4"
                         />
                       </svg>
-                      + Criar Bucket
+                      Criar Bucket
                     </button>
                   </div>
                   <div className="border-t border-gray-200">
@@ -460,7 +460,7 @@ export default function Header({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nome Amigável
+                    Nome
                   </label>
                   <input
                     type="text"

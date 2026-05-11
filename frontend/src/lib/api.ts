@@ -49,7 +49,7 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => {
     // Verifica se a resposta é HTML (erro comum quando backend não está rodando)
-    const contentType = response.headers['content-type'] || ''
+    const contentType = String(response.headers['content-type'] || '')
     const responseData = response.data
     
     if (contentType.includes('text/html') || 
