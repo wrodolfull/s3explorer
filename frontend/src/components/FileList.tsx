@@ -377,7 +377,6 @@ export default function FileList({ bucket }: FileListProps) {
         </div>
       </div>
 
-      {/* Filtros */}
       <div className="mb-4 p-4 bg-gray-50 rounded-lg">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -583,7 +582,7 @@ export default function FileList({ bucket }: FileListProps) {
                               onClick={() => handleListenCall(audioFile.key)}
                               title="Ouvir chamada"
                               aria-label="Ouvir chamada"
-                              className="text-indigo-600 hover:text-indigo-900"
+                              className="text-gray-500 hover:text-gray-700"
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -609,7 +608,7 @@ export default function FileList({ bucket }: FileListProps) {
                                 readingTranscription ===
                                 (transcriptionFile?.key || baseFile.key)
                               }
-                              className="text-green-600 hover:text-green-900 disabled:opacity-50"
+                              className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
                               title="Ler transcrição"
                               aria-label="Ler transcrição"
                             >
@@ -654,7 +653,7 @@ export default function FileList({ bucket }: FileListProps) {
 
                           <button
                             onClick={() => handleDownload(baseFile.key)}
-                            className="text-primary-600 hover:text-primary-900"
+                            className="text-gray-500 hover:text-gray-700"
                             title="Download"
                             aria-label="Download"
                           >
@@ -678,7 +677,7 @@ export default function FileList({ bucket }: FileListProps) {
                       <td className="px-4 py-4">
                         <details className="text-xs text-gray-600">
                           <summary
-                            className="cursor-pointer"
+                            className="cursor-pointer list-none text-gray-500 hover:text-gray-700 [&::-webkit-details-marker]:hidden"
                             title="Ver detalhes"
                             aria-label="Ver detalhes"
                           >
@@ -688,19 +687,17 @@ export default function FileList({ bucket }: FileListProps) {
                               fill="currentColor"
                               className="w-5 h-5"
                             >
-                              <path d="M6.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM12.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM18.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+                              <path d="M12 6.75a1.125 1.125 0 110-2.25 1.125 1.125 0 010 2.25zM12 13.125a1.125 1.125 0 110-2.25 1.125 1.125 0 010 2.25zM12 19.5a1.125 1.125 0 110-2.25 1.125 1.125 0 010 2.25z" />
                             </svg>
                           </summary>
 
                           <div className="mt-2 space-y-1">
                             <div>
-                              <strong>UUID:</strong>{' '}
-                              {baseFile.call_metadata?.call_uuid || '-'}
+                              <strong>UUID:</strong> {baseFile.call_metadata?.call_uuid || '-'}
                             </div>
 
                             <div>
-                              <strong>Leg:</strong>{' '}
-                              {baseFile.call_metadata?.leg || '-'}
+                              <strong>Leg:</strong> {baseFile.call_metadata?.leg || '-'}
                             </div>
 
                             <div>
@@ -720,7 +717,6 @@ export default function FileList({ bucket }: FileListProps) {
             </table>
           </div>
 
-          {/* Paginação */}
           <div className="mt-4 flex items-center justify-between">
             <div className="text-sm text-gray-700">
               Página {page}
@@ -773,7 +769,6 @@ export default function FileList({ bucket }: FileListProps) {
         </div>
       )}
 
-      {/* Modal de Transcrição */}
       {showTranscriptionModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
