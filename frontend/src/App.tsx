@@ -4,7 +4,6 @@ import { Bucket } from './lib/api'
 import Login from './components/Login'
 import Header from './components/Header'
 import FileList from './components/FileList'
-import FileUpload from './components/FileUpload'
 import LogsView from './components/LogsView'
 import { bucketApi } from './lib/api'
 
@@ -12,7 +11,6 @@ function App() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [selectedBucket, setSelectedBucket] = useState<Bucket | null>(null)
-  const [refreshKey, setRefreshKey] = useState(0)
   const [showLogs, setShowLogs] = useState(false)
   const [buckets, setBuckets] = useState<Bucket[]>([])
 
@@ -66,11 +64,6 @@ function App() {
     setSelectedBucket(null)
   }
 
-  const handleUploadSuccess = () => {
-    // Força recarregamento da lista de arquivos
-    setRefreshKey(prev => prev + 1)
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -109,11 +102,7 @@ function App() {
           <>
             {selectedBucket && (
               <>
-                <FileUpload
-                  bucket={selectedBucket}
-                  onUploadSuccess={handleUploadSuccess}
-                />
-                <FileList key={refreshKey} bucket={selectedBucket} />
+                <FileList bucket={selectedBucket} />
               </>
             )}
             {!selectedBucket && (
