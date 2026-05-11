@@ -33,7 +33,7 @@ def list_bucket_files(
     s3_client: boto3.client,
     bucket_name: str,
     prefix: Optional[str] = None,
-    start_after: Optional[str] = None,
+    continuation_token: Optional[str] = None,
     max_keys: Optional[int] = None
 ) -> tuple[List[FileResponse], Optional[str], bool]:
     """
@@ -43,7 +43,7 @@ def list_bucket_files(
         s3_client: Cliente boto3 S3
         bucket_name: Nome do bucket
         prefix: Prefixo opcional para filtrar arquivos
-        start_after: Chave para começar a listagem (para paginação)
+        continuation_token: Token de continuação retornado pela página anterior
         max_keys: Número máximo de arquivos a retornar
         
     Returns:
@@ -53,8 +53,8 @@ def list_bucket_files(
         params = {"Bucket": bucket_name}
         if prefix:
             params["Prefix"] = prefix
-        if start_after:
-            params["StartAfter"] = start_after
+        if continuation_token:
+            params["ContinuationToken"] = continuation_token
         if max_keys:
             params["MaxKeys"] = max_keys
         else:
@@ -203,4 +203,3 @@ def get_file_url(
         return url
     except ClientError as e:
         raise Exception(f"Erro ao gerar URL: {str(e)}")
-
