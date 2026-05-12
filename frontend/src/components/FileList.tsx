@@ -273,10 +273,11 @@ export default function FileList({ bucket }: FileListProps) {
   }
 
   const handleSelectAll = () => {
-    if (selectedFiles.size === files.length) {
+    const allAudioKeys = mergedFiles.map((item) => item.audio.key)
+    if (selectedFiles.size === allAudioKeys.length) {
       setSelectedFiles(new Set())
     } else {
-      setSelectedFiles(new Set(files.map((f) => f.key)))
+      setSelectedFiles(new Set(allAudioKeys))
     }
   }
 
@@ -307,19 +308,36 @@ export default function FileList({ bucket }: FileListProps) {
       .padStart(1, '0')}`
   }
 
-  const groupedFiles = Object.values(
-    files.reduce((acc, file) => {
-      const groupKey = file.call_metadata?.call_uuid || file.key
+  const getAudioTranscriptionUid = (filename: string): string | null => {
+    const match = filename.match(/~([a-f0-9-]{36})\.mp3$/i)
+    return match ? match[1] : null
+  }
 
-      if (!acc[groupKey]) {
-        acc[groupKey] = []
-      }
+  const getJsonUid = (filename: string): string | null => {
+    const match = filename.match(/~([a-f0-9-]{36})\.json$/i)
+    return match ? match[1] : null
+  }
 
-      acc[groupKey].push(file)
+  const audios = files.filter((file) => file.key.toLowerCase().endsWith('.mp3'))
+  const transcriptions = files.filter((file) => file.key.toLowerCase().endsWith('.json'))
 
-      return acc
-    }, {} as Record<string, FileInfo[]>)
-  )
+  const transcriptionsByUid = new Map<string, FileInfo>()
+  for (const json of transcriptions) {
+    const uid = getJsonUid(json.key)
+    if (uid) {
+      transcriptionsByUid.set(uid, json)
+    }
+  }
+
+  const mergedFiles = audios.map((audio) => {
+    const uid = getAudioTranscriptionUid(audio.key)
+
+    return {
+      audio,
+      transcriptionUid: uid,
+      transcription: uid ? transcriptionsByUid.get(uid) || null : null,
+    }
+  })
 
   const handleListenCall = async (fileKey: string) => {
     if (!bucket) return
@@ -359,7 +377,7 @@ export default function FileList({ bucket }: FileListProps) {
 
           <button
             onClick={handleDownloadAll}
-            disabled={downloading || files.length === 0}
+            disabled={downloading || mergedFiles.length === 0}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
             {downloading ? 'Baixando...' : 'Download Todos'}
@@ -462,14 +480,14 @@ export default function FileList({ bucket }: FileListProps) {
         <div className="text-center py-8 text-gray-500">
           Carregando arquivos...
         </div>
-      ) : files.length === 0 ? (
+      ) : mergedFiles.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           Nenhum arquivo encontrado neste bucket
         </div>
       ) : (
         <>
           <div className="mb-2 text-sm text-gray-600">
-            Mostrando {files.length} arquivo(s) - Página {page}
+            Mostrando {mergedFiles.length} áudio(s) - Página {page}
             {selectedFiles.size > 0 && ` - ${selectedFiles.size} selecionado(s)`}
           </div>
 
@@ -480,7 +498,9 @@ export default function FileList({ bucket }: FileListProps) {
                   <th className="px-4 py-3 text-left w-12">
                     <input
                       type="checkbox"
-                      checked={selectedFiles.size === files.length && files.length > 0}
+                      checked={
+                        selectedFiles.size === mergedFiles.length && mergedFiles.length > 0
+                      }
                       onChange={handleSelectAll}
                       className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                     />
@@ -513,14 +533,8 @@ export default function FileList({ bucket }: FileListProps) {
               </thead>
 
               <tbody className="bg-white divide-y divide-gray-200">
-                {groupedFiles.map((group) => {
-                  const audioFile = group.find(
-                    (f) => f.call_metadata?.file_type === 'audio'
-                  )
-                  const transcriptionFile = group.find(
-                    (f) => f.call_metadata?.file_type === 'transcription'
-                  )
-                  const baseFile = audioFile || transcriptionFile || group[0]
+                {mergedFiles.map(({ audio: audioFile, transcription: transcriptionFile }) => {
+                  const baseFile = audioFile
 
                   return (
                     <tr
@@ -599,7 +613,7 @@ export default function FileList({ bucket }: FileListProps) {
                             </button>
                           )}
 
-                          {transcriptionFile && (
+                          {transcriptionFile ? (
                             <button
                               onClick={() =>
                                 handleReadTranscription(transcriptionFile?.key || baseFile.key)
@@ -649,6 +663,10 @@ export default function FileList({ bucket }: FileListProps) {
                                 </svg>
                               )}
                             </button>
+                          ) : (
+                            <span className="text-xs text-amber-600 px-2">
+                              Processando
+                            </span>
                           )}
 
                           <button
@@ -705,7 +723,8 @@ export default function FileList({ bucket }: FileListProps) {
                             </div>
 
                             <div>
-                              <strong>Arquivos agrupados:</strong> {group.length}
+                              <strong>Transcrição:</strong>{' '}
+                              {transcriptionFile ? 'Encontrada' : 'Não encontrada'}
                             </div>
                           </div>
                         </details>
