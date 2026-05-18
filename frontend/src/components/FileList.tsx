@@ -24,6 +24,7 @@ export default function FileList({ bucket }: FileListProps) {
   const [showTranscriptionModal, setShowTranscriptionModal] = useState(false)
   const [showAudioModal, setShowAudioModal] = useState(false)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [audioPlayingLabel, setAudioPlayingLabel] = useState<string | null>(null)
   const [detailedView, setDetailedView] = useState(false)
 
   const [appliedSearchText, setAppliedSearchText] = useState('')
@@ -296,6 +297,31 @@ export default function FileList({ bucket }: FileListProps) {
     return new Date(dateString).toLocaleString('pt-BR')
   }
 
+  const toInputDate = (date: Date): string => {
+    return date.toISOString().slice(0, 10)
+  }
+
+  const applyPresetRange = (daysBack: number) => {
+    const now = new Date()
+    const start = new Date(now)
+    start.setDate(now.getDate() - daysBack)
+    setDateFrom(toInputDate(start))
+    setDateTo(toInputDate(now))
+  }
+
+  const applyYesterdayRange = () => {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const value = toInputDate(yesterday)
+    setDateFrom(value)
+    setDateTo(value)
+  }
+
+  const getFriendlyName = (fileKey: string): string => {
+    const phoneMatch = fileKey.match(/(\d{10,15})/)
+    return phoneMatch ? `Gravação - ${phoneMatch[1]}` : 'Gravação'
+  }
+
   const formatTimeFromMs = (ms: number): string => {
     const totalSeconds = Math.floor(ms / 1000)
     const minutes = Math.floor(totalSeconds / 60)
@@ -340,6 +366,17 @@ export default function FileList({ bucket }: FileListProps) {
     }
   })
 
+  const totalStorage = mergedFiles.reduce((acc, item) => acc + item.audio.size, 0)
+  const todayLabel = new Date().toDateString()
+  const recordingsToday = mergedFiles.filter(
+    ({ audio }) => new Date(audio.last_modified).toDateString() === todayLabel,
+  ).length
+  const lastUpdated = mergedFiles.length
+    ? mergedFiles.reduce((latest, current) =>
+        new Date(current.audio.last_modified) > new Date(latest.audio.last_modified) ? current : latest,
+      ).audio.last_modified
+    : null
+
   const metadataColumns = Array.from(
     new Set(
       mergedFiles.flatMap(({ audio }) =>
@@ -354,6 +391,7 @@ export default function FileList({ bucket }: FileListProps) {
     try {
       const { url } = await fileApi.download(bucket.id, fileKey)
       setAudioUrl(url)
+      setAudioPlayingLabel(getFriendlyName(fileKey))
       setShowAudioModal(true)
     } catch (err: any) {
       alert(err.response?.data?.detail || 'Erro ao carregar áudio')
@@ -371,7 +409,7 @@ export default function FileList({ bucket }: FileListProps) {
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-gray-800">Arquivos</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Gravações</h2>
 
         <div className="flex gap-2">
           {selectedFiles.size > 0 && (
@@ -385,7 +423,15 @@ export default function FileList({ bucket }: FileListProps) {
           )}
 
           <button
-            onClick={handleDownloadAll}
+            onClick={() => {
+              if (mergedFiles.length > 100) {
+                const confirmDownload = window.confirm(
+                  `Você está prestes a baixar ${mergedFiles.length} gravações. Deseja continuar?`,
+                )
+                if (!confirmDownload) return
+              }
+              handleDownloadAll()
+            }}
             disabled={downloading || mergedFiles.length === 0}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
@@ -411,11 +457,26 @@ export default function FileList({ bucket }: FileListProps) {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 mb-4">
+        {[
+          { label: 'Total de gravações', value: mergedFiles.length.toString() },
+          { label: 'Gravações hoje', value: recordingsToday.toString() },
+          { label: 'Tamanho total armazenado', value: formatFileSize(totalStorage) },
+          { label: 'Última atualização', value: lastUpdated ? formatDate(lastUpdated) : '-' },
+          { label: 'Bucket atual', value: bucket.bucket_name },
+        ].map((card) => (
+          <div key={card.label} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <div className="text-xs uppercase tracking-wide text-gray-500">{card.label}</div>
+            <div className="text-sm font-semibold text-gray-800 mt-1 break-words">{card.value}</div>
+          </div>
+        ))}
+      </div>
+
       <div className="mb-4 p-4 bg-gray-50 rounded-lg">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Buscar (case sensitive)
+              Buscar
             </label>
 
             <input
@@ -428,7 +489,7 @@ export default function FileList({ bucket }: FileListProps) {
                 }
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              placeholder="Digite e pressione Enter ou clique em Aplicar"
+              placeholder="Buscar por número, nome do arquivo, data ou UUID"
             />
           </div>
 
@@ -460,6 +521,35 @@ export default function FileList({ bucket }: FileListProps) {
         </div>
 
         <div className="mt-4 flex gap-2 items-center">
+          <button
+            onClick={() => {
+              const today = toInputDate(new Date())
+              setDateFrom(today)
+              setDateTo(today)
+            }}
+            className="text-sm px-3 py-2 border border-gray-300 rounded-lg hover:bg-white"
+          >
+            Hoje
+          </button>
+          <button
+            onClick={applyYesterdayRange}
+            className="text-sm px-3 py-2 border border-gray-300 rounded-lg hover:bg-white"
+          >
+            Ontem
+          </button>
+          <button
+            onClick={() => applyPresetRange(6)}
+            className="text-sm px-3 py-2 border border-gray-300 rounded-lg hover:bg-white"
+          >
+            Últimos 7 dias
+          </button>
+          <button
+            onClick={() => applyPresetRange(29)}
+            className="text-sm px-3 py-2 border border-gray-300 rounded-lg hover:bg-white"
+          >
+            Últimos 30 dias
+          </button>
+
           <button
             onClick={handleApplyFilters}
             className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
@@ -523,7 +613,7 @@ export default function FileList({ bucket }: FileListProps) {
                   </th>
 
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
-                    Nome
+                    Gravação
                   </th>
 
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
@@ -531,11 +621,19 @@ export default function FileList({ bucket }: FileListProps) {
                   </th>
 
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
-                    Número
+                    Número principal
                   </th>
 
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
-                    Modificado
+                    Data/Hora
+                  </th>
+
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                    Duração
+                  </th>
+
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                    Tamanho
                   </th>
 
                   {detailedView &&
@@ -583,6 +681,12 @@ export default function FileList({ bucket }: FileListProps) {
                           className="text-sm font-medium text-gray-900 break-words"
                           title={baseFile.key}
                         >
+                          {getFriendlyName(baseFile.key)}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {formatDate(baseFile.last_modified)}
+                        </div>
+                        <div className="text-xs text-gray-400 truncate" title={baseFile.key}>
                           {baseFile.key}
                         </div>
                       </td>
@@ -613,6 +717,12 @@ export default function FileList({ bucket }: FileListProps) {
                         <div className="text-sm text-gray-500">
                           {formatDate(baseFile.last_modified)}
                         </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {baseFile.call_metadata?.timestamp || '-'}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatFileSize(baseFile.size)}
                       </td>
 
                       {detailedView &&
@@ -724,6 +834,19 @@ export default function FileList({ bucket }: FileListProps) {
                               <path d="M3.75 15a.75.75 0 01.75.75v3a.75.75 0 00.75.75h13.5a.75.75 0 00.75-.75v-3a.75.75 0 011.5 0v3a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18.75v-3a.75.75 0 01.75-.75z" />
                             </svg>
                           </button>
+
+                          <button
+                            onClick={async () => {
+                              if (!bucket) return
+                              const { url } = await fileApi.download(bucket.id, baseFile.key)
+                              await navigator.clipboard.writeText(url)
+                            }}
+                            className="text-gray-500 hover:text-gray-700"
+                            title="Copiar link"
+                            aria-label="Copiar link"
+                          >
+                            🔗
+                          </button>
                         </div>
                       </td>
 
@@ -801,6 +924,10 @@ export default function FileList({ bucket }: FileListProps) {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl">
             <h2 className="text-xl font-bold mb-4">Ouvir chamada</h2>
+
+            {audioPlayingLabel && (
+              <p className="text-sm text-gray-600 mb-2">{audioPlayingLabel}</p>
+            )}
 
             <audio src={audioUrl} controls className="w-full" />
 
