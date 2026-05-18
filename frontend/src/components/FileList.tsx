@@ -24,6 +24,7 @@ export default function FileList({ bucket }: FileListProps) {
   const [showTranscriptionModal, setShowTranscriptionModal] = useState(false)
   const [showAudioModal, setShowAudioModal] = useState(false)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [detailedView, setDetailedView] = useState(false)
 
   const [appliedSearchText, setAppliedSearchText] = useState('')
   const [appliedDateFrom, setAppliedDateFrom] = useState('')
@@ -339,6 +340,14 @@ export default function FileList({ bucket }: FileListProps) {
     }
   })
 
+  const metadataColumns = Array.from(
+    new Set(
+      mergedFiles.flatMap(({ audio }) =>
+        Object.keys(audio.call_metadata || {}).filter((key) => key !== 'file_type'),
+      ),
+    ),
+  ).sort()
+
   const handleListenCall = async (fileKey: string) => {
     if (!bucket) return
 
@@ -381,6 +390,13 @@ export default function FileList({ bucket }: FileListProps) {
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
             {downloading ? 'Baixando...' : 'Download Todos'}
+          </button>
+
+          <button
+            onClick={() => setDetailedView((current) => !current)}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            {detailedView ? 'Visão Resumida' : 'Detalhado'}
           </button>
 
           <button
@@ -522,6 +538,16 @@ export default function FileList({ bucket }: FileListProps) {
                     Modificado
                   </th>
 
+                  {detailedView &&
+                    metadataColumns.map((column) => (
+                      <th
+                        key={column}
+                        className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        {column.replace(/_/g, ' ')}
+                      </th>
+                    ))}
+
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
                     Ações
                   </th>
@@ -588,6 +614,15 @@ export default function FileList({ bucket }: FileListProps) {
                           {formatDate(baseFile.last_modified)}
                         </div>
                       </td>
+
+                      {detailedView &&
+                        metadataColumns.map((column) => (
+                          <td key={`${baseFile.key}-${column}`} className="px-4 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">
+                              {baseFile.call_metadata?.[column as keyof typeof baseFile.call_metadata] ?? '-'}
+                            </div>
+                          </td>
+                        ))}
 
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end gap-2">
