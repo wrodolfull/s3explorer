@@ -1,9 +1,46 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { fileApi, FileInfo } from '../lib/api'
 import { Bucket } from '../lib/api'
 
 interface FileListProps {
   bucket: Bucket | null
+}
+
+interface ActionButtonProps {
+  title: string
+  ariaLabel: string
+  onClick?: () => void
+  disabled?: boolean
+  children: ReactNode
+  variant?: 'primary' | 'neutral'
+}
+
+function ActionButton({
+  title,
+  ariaLabel,
+  onClick,
+  disabled = false,
+  children,
+  variant = 'neutral',
+}: ActionButtonProps) {
+  const baseClasses =
+    'inline-flex items-center justify-center h-9 w-9 rounded-lg border transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50'
+  const variantClasses =
+    variant === 'primary'
+      ? 'border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100 focus:ring-primary-500'
+      : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-800 focus:ring-gray-400'
+
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      aria-label={ariaLabel}
+      disabled={disabled}
+      className={`${baseClasses} ${variantClasses}`}
+    >
+      {children}
+    </button>
+  )
 }
 
 export default function FileList({ bucket }: FileListProps) {
@@ -761,13 +798,12 @@ export default function FileList({ bucket }: FileListProps) {
                         ))}
 
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-1.5 rounded-xl bg-gray-50 border border-gray-200 p-1.5">
                           {audioFile && (
-                            <button
+                            <ActionButton
                               onClick={() => handleListenCall(audioFile.key)}
                               title="Ouvir chamada"
-                              aria-label="Ouvir chamada"
-                              className="text-gray-500 hover:text-gray-700"
+                              ariaLabel="Ouvir chamada"
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -781,11 +817,11 @@ export default function FileList({ bucket }: FileListProps) {
                                   clipRule="evenodd"
                                 />
                               </svg>
-                            </button>
+                            </ActionButton>
                           )}
 
                           {transcriptionFile ? (
-                            <button
+                            <ActionButton
                               onClick={() =>
                                 handleReadTranscription(transcriptionFile?.key || baseFile.key)
                               }
@@ -793,9 +829,9 @@ export default function FileList({ bucket }: FileListProps) {
                                 readingTranscription ===
                                 (transcriptionFile?.key || baseFile.key)
                               }
-                              className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
                               title="Ler transcrição"
-                              aria-label="Ler transcrição"
+                              ariaLabel="Ler transcrição"
+                              variant="primary"
                             >
                               {readingTranscription ===
                               (transcriptionFile?.key || baseFile.key) ? (
@@ -833,18 +869,17 @@ export default function FileList({ bucket }: FileListProps) {
                                   />
                                 </svg>
                               )}
-                            </button>
+                            </ActionButton>
                           ) : (
-                            <span className="text-xs text-amber-600 px-2">
+                            <span className="inline-flex items-center rounded-md bg-amber-100 text-amber-700 px-2 py-1 text-[11px] font-medium">
                               Processando
                             </span>
                           )}
 
-                          <button
+                          <ActionButton
                             onClick={() => handleDownload(baseFile.key)}
-                            className="text-gray-500 hover:text-gray-700"
                             title="Download"
-                            aria-label="Download"
+                            ariaLabel="Download"
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
@@ -859,20 +894,7 @@ export default function FileList({ bucket }: FileListProps) {
                               />
                               <path d="M3.75 15a.75.75 0 01.75.75v3a.75.75 0 00.75.75h13.5a.75.75 0 00.75-.75v-3a.75.75 0 011.5 0v3a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18.75v-3a.75.75 0 01.75-.75z" />
                             </svg>
-                          </button>
-
-                          <button
-                            onClick={async () => {
-                              if (!bucket) return
-                              const { url } = await fileApi.download(bucket.id, baseFile.key)
-                              await navigator.clipboard.writeText(url)
-                            }}
-                            className="text-gray-500 hover:text-gray-700"
-                            title="Copiar link"
-                            aria-label="Copiar link"
-                          >
-                            🔗
-                          </button>
+                          </ActionButton>
                         </div>
                       </td>
 
