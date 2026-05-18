@@ -317,9 +317,35 @@ export default function FileList({ bucket }: FileListProps) {
     setDateTo(value)
   }
 
-  const getFriendlyName = (fileKey: string): string => {
-    const phoneMatch = fileKey.match(/(\d{10,15})/)
-    return phoneMatch ? `Gravação - ${phoneMatch[1]}` : 'Gravação'
+  const getFriendlyName = (recording: FileInfo | string): string => {
+    const fileInfo = typeof recording === 'string'
+      ? files.find((file) => file.key === recording)
+      : recording
+    const fileKey = typeof recording === 'string' ? recording : recording.key
+    const metadata = fileInfo?.call_metadata as Record<string, unknown> | undefined
+    const candidateNumber =
+      metadata?.mainNumber ??
+      metadata?.primaryNumber ??
+      metadata?.phoneNumber ??
+      metadata?.number ??
+      fileInfo?.call_metadata?.phone_number ??
+      fileInfo?.call_metadata?.extension ??
+      fileKey.match(/(\d{4,15})/)?.[1] ??
+      ''
+
+    const cleanNumber = String(candidateNumber).trim()
+
+    if (!cleanNumber || cleanNumber.toLowerCase() === 'unknown') {
+      return 'Gravação sem número identificado'
+    }
+
+    const onlyDigits = cleanNumber.replace(/\D/g, '')
+
+    if (onlyDigits && onlyDigits.length <= 5) {
+      return `Gravação - Ramal ${onlyDigits}`
+    }
+
+    return `Gravação - ${cleanNumber}`
   }
 
   const formatTimeFromMs = (ms: number): string => {
@@ -681,7 +707,7 @@ export default function FileList({ bucket }: FileListProps) {
                           className="text-sm font-medium text-gray-900 break-words"
                           title={baseFile.key}
                         >
-                          {getFriendlyName(baseFile.key)}
+                          {getFriendlyName(baseFile)}
                         </div>
                         <div className="text-xs text-gray-500">
                           {formatDate(baseFile.last_modified)}
