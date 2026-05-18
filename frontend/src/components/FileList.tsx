@@ -271,34 +271,6 @@ export default function FileList({ bucket }: FileListProps) {
     }
   }
 
-  const handleDownloadAll = async () => {
-    if (!bucket || files.length === 0) return
-
-    try {
-      setDownloading(true)
-
-      const fileKeys = files.map((f) => f.key)
-      const result = await fileApi.downloadMultiple(bucket.id, fileKeys)
-
-      for (const item of result.urls) {
-        if (item.url) {
-          const link = document.createElement('a')
-          link.href = item.url
-          link.download = item.file_key.split('/').pop() || item.file_key
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
-
-          await new Promise((resolve) => setTimeout(resolve, 100))
-        }
-      }
-    } catch (err: any) {
-      alert(err.response?.data?.detail || 'Erro ao fazer download massivo')
-    } finally {
-      setDownloading(false)
-    }
-  }
-
   const handleSelectFile = (fileKey: string) => {
     const newSelected = new Set(selectedFiles)
 
@@ -470,57 +442,44 @@ export default function FileList({ bucket }: FileListProps) {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-gray-800">Gravações</h2>
+    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+      <div className="flex flex-col gap-4 mb-5 border-b border-slate-200 pb-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold text-slate-900">Gravações</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            {mergedFiles.length} arquivo(s) encontrado(s) neste bucket
+          </p>
+        </div>
 
-        <div className="flex gap-2">
-          {selectedFiles.size > 0 && (
-            <button
-              onClick={handleDownloadMultiple}
-              disabled={downloading}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
-            >
-              {downloading ? 'Baixando...' : `Download Selecionados (${selectedFiles.size})`}
-            </button>
-          )}
-
-          <button
-            onClick={() => {
-              if (mergedFiles.length > 100) {
-                const confirmDownload = window.confirm(
-                  `Você está prestes a baixar ${mergedFiles.length} gravações. Deseja continuar?`,
-                )
-                if (!confirmDownload) return
-              }
-              handleDownloadAll()
-            }}
-            disabled={downloading || mergedFiles.length === 0}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {downloading ? 'Baixando...' : 'Download Todos'}
-          </button>
-
-          <button
-            onClick={() => setDetailedView((current) => !current)}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            {detailedView ? 'Visão Resumida' : 'Detalhado'}
-          </button>
-
+        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
           <button
             onClick={() =>
               loadFiles(page, nextToken, appliedSearchText, appliedDateFrom, appliedDateTo)
             }
             disabled={loading}
-            className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
+            className="border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors"
           >
             {loading ? 'Carregando...' : 'Atualizar'}
+          </button>
+
+          <button
+            onClick={() => setDetailedView((current) => !current)}
+            className="border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors"
+          >
+            Visualização: {detailedView ? 'Detalhada' : 'Lista'}
+          </button>
+
+          <button
+            onClick={handleDownloadMultiple}
+            disabled={downloading || selectedFiles.size === 0}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {downloading ? 'Baixando...' : `Baixar selecionados${selectedFiles.size ? ` (${selectedFiles.size})` : ''}`}
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 mb-5">
         {[
           { label: 'Total de gravações', value: mergedFiles.length.toString() },
           { label: 'Gravações hoje', value: recordingsToday.toString() },
@@ -528,14 +487,14 @@ export default function FileList({ bucket }: FileListProps) {
           { label: 'Última atualização', value: lastUpdated ? formatDate(lastUpdated) : '-' },
           { label: 'Bucket atual', value: bucket.bucket_name },
         ].map((card) => (
-          <div key={card.label} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-            <div className="text-xs uppercase tracking-wide text-gray-500">{card.label}</div>
-            <div className="text-sm font-semibold text-gray-800 mt-1 break-words">{card.value}</div>
+          <div key={card.label} className="bg-white border border-slate-200 rounded-lg px-3 py-2.5">
+            <div className="text-xs uppercase tracking-wide text-slate-500">{card.label}</div>
+            <div className="text-lg font-semibold text-slate-900 mt-1 break-words leading-tight">{card.value}</div>
           </div>
         ))}
       </div>
 
-      <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+      <div className="mb-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -617,7 +576,7 @@ export default function FileList({ bucket }: FileListProps) {
             onClick={handleApplyFilters}
             className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
           >
-            Aplicar Filtros
+            Aplicar
           </button>
 
           {(appliedSearchText || appliedDateFrom || appliedDateTo) && (

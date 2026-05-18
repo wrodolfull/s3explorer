@@ -176,16 +176,16 @@ export default function Header({
   }
 
   return (
-    <header className="bg-white shadow">
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
+    <header className="bg-white border-b border-slate-200">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-2.5">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-800">S3 Explorer</h1>
-          <div className="flex items-center gap-4">
+          <h1 className="text-lg font-semibold text-slate-900">Central de Gravações</h1>
+          <div className="flex items-center gap-2">
             {/* Menu Buckets */}
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowBucketsDropdown(!showBucketsDropdown)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
+                className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-md transition-colors flex items-center gap-1.5"
               >
                 Buckets
                 <svg
@@ -389,7 +389,7 @@ export default function Header({
             {showLogs && (
               <button
                 onClick={onShowLogs}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
               >
                 Arquivos
               </button>
@@ -410,7 +410,7 @@ export default function Header({
             {/* Botão Sair */}
             <button
               onClick={onLogout}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+              className="border border-slate-300 text-slate-600 px-3 py-1.5 text-sm rounded-md hover:bg-slate-100 transition-colors"
             >
               Sair
             </button>
